@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # 개발 환경용 오버라이드 설정
+  trading-bot:
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: python autotrade.py
+
+  dashboard:
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: streamlit run streamlit-app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+
+  # 개발 환경에서는 선택적 서비스들 비활성화
+  db:
+    profiles:
+      - optional
+
+  redis:
+    profiles:
+      - optional
+
+  nginx:
+    profiles:
+      - optional 

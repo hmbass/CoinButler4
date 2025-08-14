@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # 데이터베이스 초기화 서비스
+  init-db:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: gpt-bitcoin-init-db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - trading-network
+    command: python init_db.py
+    profiles:
+      - init
+
+  # 자동 거래 봇 서비스 (Chrome 없이)
+  trading-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: gpt-bitcoin-trading-bot-simple
+    restart: unless-stopped
+    environment:
+      - UPBIT_ACCESS_KEY=${UPBIT_ACCESS_KEY}
+      - UPBIT_SECRET_KEY=${UPBIT_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
+      - HEADLESS=true
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - trading-network
+    depends_on:
+      - dashboard
+    command: python autotrade.py
+
+  # 모니터링 대시보드 서비스 (Chrome 없이)
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: gpt-bitcoin-dashboard-simple
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - UPBIT_ACCESS_KEY=${UPBIT_ACCESS_KEY}
+      - UPBIT_SECRET_KEY=${UPBIT_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - trading-network
+    command: streamlit run streamlit-app.py --server.port=8501 --server.address=0.0.0.0
+
+  # 데이터베이스 서비스 (선택사항)
+  db:
+    image: postgres:15-alpine
+    container_name: gpt-bitcoin-db-simple
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=trading_db
+      - POSTGRES_USER=trading_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-trading_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - trading-network
+
+  # Redis 캐시 서비스 (선택사항)
+  redis:
+    image: redis:7-alpine
+    container_name: gpt-bitcoin-redis-simple
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - trading-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  trading-network:
+    driver: bridge 

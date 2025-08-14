@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 자동 거래 봇 서비스 (x86_64 운영환경용)
+  trading-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86_64
+    container_name: gpt-bitcoin-trading-bot-x86_64
+    restart: unless-stopped
+    environment:
+      - UPBIT_ACCESS_KEY=${UPBIT_ACCESS_KEY}
+      - UPBIT_SECRET_KEY=${UPBIT_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
+      - HEADLESS=true
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - trading-network
+    depends_on:
+      - dashboard
+    command: python autotrade.py
+
+  # 모니터링 대시보드 서비스 (x86_64 운영환경용)
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.x86_64
+    container_name: gpt-bitcoin-dashboard-x86_64
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - UPBIT_ACCESS_KEY=${UPBIT_ACCESS_KEY}
+      - UPBIT_SECRET_KEY=${UPBIT_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - trading-network
+    command: streamlit run streamlit-app.py --server.port=8501 --server.address=0.0.0.0
+
+networks:
+  trading-network:
+    driver: bridge 

@@ -16,6 +16,8 @@ services:
       - HEADLESS=true
       - CHROME_BIN=/usr/bin/google-chrome
       - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+      - TRADING_MODE=${TRADING_MODE:-batch}
+      - TRADING_IMMEDIATE=${TRADING_IMMEDIATE:-}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -23,7 +25,16 @@ services:
       - trading-network
     depends_on:
       - dashboard
-    command: python autotrade.py
+    command: >
+      sh -c "
+        if [ '$$TRADING_MODE' = 'manual' ]; then
+          echo '수동 모드는 대화형 실행이 필요합니다. 로컬에서 실행하세요:';
+          echo 'python autotrade.py --mode manual';
+          tail -f /dev/null;
+        else
+          python autotrade.py --mode $$TRADING_MODE $$TRADING_IMMEDIATE;
+        fi
+      "
 
   # 모니터링 대시보드 서비스 (x86_64 운영환경용)
   dashboard:

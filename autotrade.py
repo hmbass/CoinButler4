@@ -419,7 +419,7 @@ class EnhancedCryptoTrader:
 
 
             response = self.client.chat.completions.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4o",
                 messages=[
                      {
                         "role": "system",
@@ -913,7 +913,7 @@ class EnhancedCryptoTrader:
 
 
             response = self.client.chat.completions.create(
-                model="gpt-4o-2024-08-06",
+                model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
@@ -1085,14 +1085,23 @@ def ai_trading():
 
 # 메인 실행 코드
 if __name__ == "__main__":
+    import argparse
+    import schedule
+    from datetime import datetime
+    
+    # 명령행 인자 파싱
+    parser = argparse.ArgumentParser(description='Enhanced Bitcoin Trading Bot')
+    parser.add_argument('--mode', choices=['batch', 'manual'], default='batch',
+                       help='실행 모드: batch(배치실행), manual(수동실행)')
+    parser.add_argument('--immediate', action='store_true',
+                       help='즉시 한 번 실행 (배치 모드에서만 적용)')
+    args = parser.parse_args()
+    
     try:
-        import schedule
-        from datetime import datetime
-       
         env_type = 'EC2' if is_ec2() else '로컬'
-        print(f"Enhanced Bitcoin Trading Bot 시작 ({env_type} 환경)")
-        print("종료하려면 Ctrl+C를 누르세요")
-       
+        mode_str = '배치실행' if args.mode == 'batch' else '수동실행'
+        print(f"Enhanced Bitcoin Trading Bot 시작 ({env_type} 환경, {mode_str} 모드)")
+        
         load_dotenv()
        
         # 필수 환경 변수 체크
@@ -1100,7 +1109,6 @@ if __name__ == "__main__":
         missing_vars = [var for var in required_env_vars if not os.getenv(var)]
         if missing_vars:
             raise ValueError(f"필수 환경 변수가 없습니다: {', '.join(missing_vars)}")
-
 
         def run_trading():
             try:
@@ -1111,27 +1119,77 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"실행 중 오류 발생: {e}")
 
+        if args.mode == 'manual':
+            # 수동 실행 모드
+            print("수동 실행 모드입니다.")
+            print("명령어:")
+            print("  'run' 또는 'r': 거래 실행")
+            print("  'status' 또는 's': 현재 상태 확인")
+            print("  'quit' 또는 'q': 종료")
+            print("  'help' 또는 'h': 도움말")
+            
+            while True:
+                try:
+                    command = input("\n명령어를 입력하세요 > ").strip().lower()
+                    
+                    if command in ['run', 'r']:
+                        print("거래를 실행합니다...")
+                        run_trading()
+                    elif command in ['status', 's']:
+                        print("현재 상태를 확인합니다...")
+                        trader = EnhancedCryptoTrader("KRW-BTC")
+                        status = trader.get_current_status()
+                        if status:
+                            print(f"현재 BTC 가격: {status['current_price']:,.0f} KRW")
+                            print(f"보유 BTC: {status['crypto_balance']:.8f}")
+                            print(f"보유 현금: {status['krw_balance']:,.0f} KRW")
+                            print(f"총 자산: {status['total_value']:,.0f} KRW")
+                            if status['crypto_balance'] > 0:
+                                print(f"미실현 손익: {status['unrealized_profit']:,.0f} KRW ({status['profit_percentage']:.2f}%)")
+                    elif command in ['quit', 'q']:
+                        print("프로그램을 종료합니다.")
+                        break
+                    elif command in ['help', 'h']:
+                        print("사용 가능한 명령어:")
+                        print("  'run' 또는 'r': 거래 실행")
+                        print("  'status' 또는 's': 현재 상태 확인")
+                        print("  'quit' 또는 'q': 종료")
+                        print("  'help' 또는 'h': 도움말")
+                    else:
+                        print("알 수 없는 명령어입니다. 'help' 또는 'h'를 입력하여 도움말을 확인하세요.")
+                        
+                except KeyboardInterrupt:
+                    print("\n사용자에 의해 봇이 종료되었습니다")
+                    break
+                except Exception as e:
+                    print(f"실행 중 오류 발생: {e}")
+        
+        else:
+            # 배치 실행 모드 (기존 방식)
+            print("배치 실행 모드입니다.")
+            print("종료하려면 Ctrl+C를 누르세요")
+            
+            # 스케줄 설정
+            schedule.every().day.at("09:00").do(run_trading)
+            schedule.every().day.at("15:00").do(run_trading)
+            schedule.every().day.at("21:00").do(run_trading)
 
-        # 스케줄 설정
-        schedule.every().day.at("09:00").do(run_trading)
-        schedule.every().day.at("15:00").do(run_trading)
-        schedule.every().day.at("21:00").do(run_trading)
-
-
-        # 시작 시 즉시 한 번 실행
-        print("\n첫 번째 트레이딩 시작...")
-        run_trading()
-       
-        while True:
-            try:
-                schedule.run_pending()
-                time.sleep(30)  # 30초마다 스케줄 체크
-            except KeyboardInterrupt:
-                print("\n사용자에 의해 봇이 종료되었습니다")
-                break
-            except Exception as e:
-                print(f"실행 중 오류 발생: {e}")
-                time.sleep(60)  # 에러 발생시 60초 대기
+            # 즉시 실행 옵션
+            if args.immediate:
+                print("\n첫 번째 트레이딩 시작...")
+                run_trading()
+           
+            print("스케줄된 실행 시간: 09:00, 15:00, 21:00")
+            while True:
+                try:
+                    schedule.run_pending()
+                    time.sleep(30)  # 30초마다 스케줄 체크
+                except KeyboardInterrupt:
+                    print("\n사용자에 의해 봇이 종료되었습니다")
+                    break
+                except Exception as e:
+                    print(f"실행 중 오류 발생: {e}")
+                    time.sleep(60)  # 에러 발생시 60초 대기
                
     except Exception as e:
         print(f"프로그램 실행 중 치명적 오류 발생: {e}")

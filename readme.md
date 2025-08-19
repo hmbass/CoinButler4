@@ -26,8 +26,17 @@
 ### 자동 플랫폼 감지
 
 ```bash
-# 플랫폼을 자동으로 감지하여 적절한 설정으로 실행
+# 플랫폼을 자동으로 감지하여 적절한 설정으로 실행 (배치 모드)
 ./detect_platform.sh
+
+# 플랫폼 자동 감지 + 수동 모드로 실행
+./detect_platform.sh --mode manual
+
+# 플랫폼 자동 감지 + 배치 모드 + 즉시 실행
+./detect_platform.sh --mode batch --immediate
+
+# 도움말 확인
+./detect_platform.sh --help
 ```
 
 ## 📁 파일 구조
@@ -203,14 +212,75 @@ nano .env
 #### 3. 실행
 
 ```bash
-# 자동 거래 봇 실행
+# 자동 거래 봇 실행 (배치 모드 - 기본값)
 python autotrade.py
+
+# 자동 거래 봇 실행 (수동 모드)
+python autotrade.py --mode manual
+
+# 배치 모드로 즉시 한 번 실행
+python autotrade.py --mode batch --immediate
 
 # 모니터링 대시보드 실행
 streamlit run streamlit-app.py
 ```
 
 ## 🚀 사용 방법
+
+### 실행 모드
+
+이 시스템은 두 가지 실행 모드를 지원합니다:
+
+#### 1. **배치 실행 모드 (기본값)**
+- 자동으로 스케줄된 시간에 거래를 실행합니다
+- 하루 3회 실행: 09:00, 15:00, 21:00
+- 서버 운영에 적합합니다
+
+```bash
+# 배치 모드로 실행
+python autotrade.py
+# 또는
+python autotrade.py --mode batch
+
+# 배치 모드 + 즉시 한 번 실행
+python autotrade.py --mode batch --immediate
+```
+
+#### 2. **수동 실행 모드**
+- 사용자가 직접 명령어를 입력하여 거래를 실행합니다
+- 테스트나 검증 목적에 적합합니다
+- 실시간 상태 확인이 가능합니다
+
+```bash
+# 수동 모드로 실행
+python autotrade.py --mode manual
+```
+
+수동 모드에서 사용 가능한 명령어:
+- `run` 또는 `r`: 거래 실행
+- `status` 또는 `s`: 현재 상태 확인
+- `quit` 또는 `q`: 프로그램 종료
+- `help` 또는 `h`: 도움말 표시
+
+#### 3. **플랫폼 자동 감지 모드 (권장)**
+- 현재 시스템의 아키텍처(ARM64, x86_64)를 자동으로 감지
+- 적절한 Docker 설정으로 자동 실행
+- 실행 모드도 함께 선택 가능
+
+```bash
+# 기본 사용법 (배치 모드)
+./detect_platform.sh
+
+# 수동 모드로 실행 - 테스트/검증용
+./detect_platform.sh --mode manual
+
+# 배치 모드 + 즉시 한 번 실행
+./detect_platform.sh --mode batch --immediate
+```
+
+**주의사항**: 
+- 수동 모드는 Docker 컨테이너에서 대화형 실행이 어려우므로, 컨테이너는 대기 상태가 되고 로컬에서 직접 실행하라는 메시지가 표시됩니다.
+- 수동 모드 테스트는 로컬에서 `python autotrade.py --mode manual`로 실행하는 것을 권장합니다.
 
 ### Docker Compose 서비스 구성
 
@@ -232,7 +302,7 @@ streamlit run streamlit-app.py
 
 #### 개발 환경
 ```bash
-# 기본 서비스만 실행
+# 기본 서비스만 실행 (배치 모드)
 docker-compose up -d
 
 # 모든 서비스 실행
@@ -240,6 +310,12 @@ docker-compose --profile optional up -d
 
 # Chrome 설치 오류 시 Chromium 사용
 docker-compose -f docker-compose.alternative.yml up -d
+
+# 플랫폼 자동 감지로 실행 (권장)
+./detect_platform.sh
+
+# 플랫폼 자동 감지 + 수동 모드
+./detect_platform.sh --mode manual
 ```
 
 #### 프로덕션 환경

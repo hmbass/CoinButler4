@@ -3,6 +3,65 @@
 # 플랫폼 감지 스크립트
 echo "🔍 플랫폼 감지 중..."
 
+# 기본값 설정
+MODE="batch"
+IMMEDIATE=""
+
+# 도움말 함수
+show_help() {
+    echo "사용법: $0 [옵션]"
+    echo ""
+    echo "옵션:"
+    echo "  --mode <mode>      실행 모드 선택 (batch|manual, 기본값: batch)"
+    echo "  --immediate        배치 모드에서 즉시 한 번 실행"
+    echo "  -h, --help         이 도움말 표시"
+    echo ""
+    echo "예시:"
+    echo "  $0                           # 배치 모드로 실행"
+    echo "  $0 --mode manual            # 수동 모드로 실행"
+    echo "  $0 --mode batch --immediate # 배치 모드 + 즉시 실행"
+    echo ""
+}
+
+# 명령행 인자 파싱
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --mode)
+            MODE="$2"
+            if [[ "$MODE" != "batch" && "$MODE" != "manual" ]]; then
+                echo "❌ 잘못된 모드: $MODE"
+                echo "💡 사용 가능한 모드: batch, manual"
+                exit 1
+            fi
+            shift 2
+            ;;
+        --immediate)
+            IMMEDIATE="--immediate"
+            shift
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "❌ 알 수 없는 옵션: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# 모드 표시
+MODE_KR="배치실행"
+if [ "$MODE" = "manual" ]; then
+    MODE_KR="수동실행"
+fi
+
+echo "🎯 실행 모드: $MODE_KR"
+if [ "$MODE" = "batch" ] && [ -n "$IMMEDIATE" ]; then
+    echo "⚡ 즉시 실행: 활성화"
+fi
+
 # 아키텍처 확인
 ARCH=$(uname -m)
 echo "📊 현재 아키텍처: $ARCH"
@@ -17,6 +76,10 @@ if [ ! -f ".env" ]; then
     echo "   cp env.example .env"
     exit 1
 fi
+
+# 실행 모드 환경변수 설정
+export TRADING_MODE="$MODE"
+export TRADING_IMMEDIATE="$IMMEDIATE"
 
 # 아키텍처별 실행
 case $ARCH in
